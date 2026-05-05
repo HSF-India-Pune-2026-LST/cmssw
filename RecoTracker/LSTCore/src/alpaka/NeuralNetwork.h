@@ -13,6 +13,7 @@
 #include "T5EmbedNetworkWeights.h"
 #include "pLSEmbedNetworkWeights.h"
 #include "T4NeuralNetworkWeights.h"
+#include "TCNeuralNetworkWeights.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
@@ -558,6 +559,33 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
 
   }  //namespace t4dnn
+
+  namespace tcdnn {
+    template <alpaka::concepts::Acc TAcc>
+    ALPAKA_FN_ACC ALPAKA_FN_INLINE float runInference(TAcc const& acc, uint8_t nHits, LSTObjType tcType) {
+      constexpr int IN = dnn::tcdnn::INPUT;
+      constexpr int HID = dnn::tcdnn::HIDDEN;
+      constexpr int OUT = dnn::tcdnn::OUTPUT;
+
+      float nHitsF = static_cast<float>(nHits);
+      float tcTypeF = static_cast<float>(tcType);
+      // ---- Input layer ----
+      float input[IN] = {nHitsF, tcTypeF};
+
+      // ---- Hidden layer ----
+      float hidden[HID];
+      linear_layer<IN, HID>(input, hidden, dnn::tcdnn::w1, dnn::tcdnn::b1);
+
+      relu_activation<HID>(hidden);
+
+      // ---- Output layer ----
+      float output[OUT];
+      linear_layer<HID, OUT>(hidden, output, dnn::tcdnn::w2, dnn::tcdnn::b2);
+
+      // ---- Sigmoid ----
+      return sigmoid_activation(acc, output[0]);
+    }
+  }  //namespace tcdnn
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE::lst
 

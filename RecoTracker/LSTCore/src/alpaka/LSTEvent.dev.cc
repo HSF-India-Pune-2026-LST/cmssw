@@ -760,6 +760,85 @@ void LSTEvent::createTrackCandidates(bool no_pls_dupclean, bool tc_pls_triplets)
                       trackCandidatesBaseDC_->view(),
                       trackCandidatesExtendedDC_->view());
 
+  // nTC already retrieved just above
+  auto tcDNNMask = cms::alpakatools::make_device_buffer<bool[]>(queue_, nTC);
+
+  // initialize for safety (optional but recommended)
+  alpaka::memset(queue_, tcDNNMask, 0u);
+
+  constexpr float tcDNNThreshold = -1.0f;
+  auto const tcDNNWorkDiv = cms::alpakatools::make_workdiv<Acc1D>(nTC, 256);
+
+  alpaka::exec<Acc1D>(
+      queue_, tcDNNWorkDiv, TrackCandidateDNNMask{}, trackCandidatesBaseDC_->view(), tcDNNMask.data(), tcDNNThreshold);
+
+  auto nSelectedDev = cms::alpakatools::make_device_buffer<unsigned int>(queue_);
+  alpaka::memset(queue_, nSelectedDev, 0u);
+
+  alpaka::exec<Acc1D>(queue_,
+                      cms::alpakatools::make_workdiv<Acc1D>(nTC, 256),
+                      CountSelectedTCs{},
+                      nTC,
+                      tcDNNMask.data(),
+                      nSelectedDev.data());
+
+  auto nSelectedHost = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
+  alpaka::memcpy(queue_, nSelectedHost, nSelectedDev);
+  alpaka::wait(queue_);
+
+  unsigned int nSelected = *nSelectedHost.data();
+
+  std::cout << "[DEBUG] nTC = " << nTC
+	    << ", nSelected = " << nSelected
+	    << std::endl;
+
+  TrackCandidatesBaseDeviceCollection compactBase(queue_, nSelected);
+  TrackCandidatesExtendedDeviceCollection compactExt(queue_, nSelected);
+  compactBase.zeroInitialise(queue_);
+  compactExt.zeroInitialise(queue_);
+
+  auto writeIndex = cms::alpakatools::make_device_buffer<unsigned int>(queue_);
+  alpaka::memset(queue_, writeIndex, 0u);
+
+  alpaka::exec<Acc1D>(queue_,
+                      cms::alpakatools::make_workdiv<Acc1D>(nTC, 256),
+                      TrackCandidateDNNFilter{},
+                      trackCandidatesBaseDC_->view(),
+                      trackCandidatesExtendedDC_->view(),
+                      compactBase.view(),
+                      compactExt.view(),
+                      tcDNNMask.data(),
+                      writeIndex.data());
+
+  std::cout << compactBase.size() << " " << compactExt.size() << std::endl;
+
+
+  auto writeIndexHost =
+    cms::alpakatools::make_host_buffer<unsigned int>(queue_);
+  alpaka::memcpy(queue_, writeIndexHost, writeIndex);
+  alpaka::wait(queue_);
+
+  std::cout << "[DEBUG] writeIndex=" << *writeIndexHost.data()
+          << std::endl;
+
+  // Create a device view to the internal counter of compactBase
+  auto nTCDevView =
+    cms::alpakatools::make_device_view(queue_,
+				       compactBase.view().nTrackCandidates());
+
+  // Copy host -> device: this sets the LOGICAL size
+  alpaka::memcpy(queue_, nTCDevView, nSelectedHost);
+  alpaka::wait(queue_);
+
+  //trackCandidatesBaseDC_.reset();
+  //trackCandidatesExtendedDC_.reset();
+  trackCandidatesBaseDC_.emplace(std::move(compactBase));
+  trackCandidatesExtendedDC_.emplace(std::move(compactExt));
+
+  std::cout << "[DEBUG] after replace nTrackCandidates = "
+	    << nSelected
+	    << std::endl;
+  
   // Check if TC buffer was possibly truncated
   auto nTrackCanTotalHost_buf = cms::alpakatools::make_host_buffer<unsigned int>(queue_);
   alpaka::memcpy(queue_,

@@ -502,6 +502,67 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     }
   };
 
+  struct TrackCandidateDNNMask {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  TrackCandidatesBase candsBase,
+                                  bool* mask,
+                                  float threshold) const {
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, candsBase.nTrackCandidates())) {
+        const uint8_t nHits = candsBase.hitIndices()[i].size();
+        const LSTObjType tcType = candsBase.trackCandidateType()[i];
+
+        const float score = lst::tcdnn::runInference(acc, nHits, tcType);
+        mask[i] = (score > threshold);
+      }
+    }
+  };
+
+  struct TrackCandidateDNNFilter {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  TrackCandidatesBase inBase,
+                                  TrackCandidatesExtended inExt,
+                                  TrackCandidatesBase outBase,
+                                  TrackCandidatesExtended outExt,
+                                  const bool* mask,
+                                  unsigned int* writeIndex) const {
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, inBase.nTrackCandidates())) {
+        if (!mask[i])
+          continue;
+
+        const unsigned int outIdx = alpaka::atomicAdd(acc, writeIndex, 1u, alpaka::hierarchy::Threads{});
+
+	if (outIdx == 0) {
+	  // mark that at least one element was written
+	  outBase.trackCandidateType()[0] = LSTObjType::pLS;
+	}
+
+        // ---- Base ----
+        outBase.trackCandidateType()[outIdx] = inBase.trackCandidateType()[i];
+        outBase.pixelSeedIndex()[outIdx] = inBase.pixelSeedIndex()[i];
+        outBase.hitIndices()[outIdx] = inBase.hitIndices()[i];
+
+        // ---- Extended ----
+        outExt.directObjectIndices()[outIdx] = inExt.directObjectIndices()[i];
+        outExt.objectIndices()[outIdx] = inExt.objectIndices()[i];
+        outExt.logicalLayers()[outIdx] = inExt.logicalLayers()[i];
+        outExt.lowerModuleIndices()[outIdx] = inExt.lowerModuleIndices()[i];
+      }
+    }
+  };
+
+  struct CountSelectedTCs {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  unsigned int nTC,
+                                  const bool* tcDNNMask,
+                                  unsigned int* nSelected) const {
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, nTC)) {
+        if (tcDNNMask[i]) {
+          alpaka::atomicAdd(acc, nSelected, 1u, alpaka::hierarchy::Threads{});
+        }
+      }
+    }
+  };
+
   struct CountSurvivingTCs {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
                                   uint16_t nLowerModules,
