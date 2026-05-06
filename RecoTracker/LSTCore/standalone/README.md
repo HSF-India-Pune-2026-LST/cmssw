@@ -1,80 +1,59 @@
 # How to set up standalone LST
 
-## Setting up LSTPerformanceWeb (only for lnx7188 and lnx4555)
-
-For lnx7188 and lnx4555 this needs to be done once
-
-    cd /cdat/tem/${USER}/
-    git clone git@github.com:SegmentLinking/LSTPerformanceWeb.git
-
-## Setting up container (only for lnx7188)
-
-For lnx7188 this needs to be done before compiling or running the code:
-
-    singularity shell --nv --bind /mnt/data1:/data --bind /data2/segmentlinking/ --bind /opt --bind /nfs --bind /mnt --bind /usr/local/cuda/bin/ --bind /cvmfs  /cvmfs/unpacked.cern.ch/registry.hub.docker.com/cmssw/el8:x86_64
+Hackathon version, relying on lxplus-gpu, assuming cvmfs is available and using cms-related git commands
 
 ## Setting up LST
 
-There are two way to set up LST as a standalone, either by setting up a full CMSSW area, which provides a unified setup for standalone and CMSSW tests, or by `sparse-checkout` only the relevant package and using them independent of CMSSW. A CVMFS-less setup is also provided for the second option.
-
-### Setting up LST within CMSSW (preferred option)
 
 ```bash
-CMSSW_VERSION=CMSSW_14_2_0_pre4 # Change with latest/preferred CMSSW version
-cmsrel ${CMSSW_VERSION}
-cd ${CMSSW_VERSION}/src/
+# needed for lxplus-gpu
+export SCRAM_ARCH=el9_amd64_gcc13
+# (use cmsrel if you are more used to it); cd to your work location first
+# repeat the following two on relogin/restart
+scram p -n CMSSW_16_1_0_pre4-puneLST-sta CMSSW CMSSW_16_1_0_pre4
+cd CMSSW_16_1_0_pre4-puneLST-sta/src/
 cmsenv
-git cms-init
+
+# just once to setup
+git cms-init --upstream-only -q
 # If necessary, add the remote git@github.com:SegmentLinking/cmssw.git
+git remote add hack-cmssw https://github.com/HSF-India-Pune-2026-LST/cmssw.git
+git remote set-url --push hack-cmssw git@github.com:HSF-India-Pune-2026-LST/cmssw.git
 # and checkout a development/feature branch
 git cms-addpkg RecoTracker/LST RecoTracker/LSTCore
+cd $CMSSW_BASE/src/RecoTracker/LSTCore/standalone/
+mkdir -p tmp
+
+# also repeat on relogin/restart
+export TMPDIR=$PWD/tmp
+source setup.sh
+# explicit pointer for lxplus
+export TRACKINGNTUPLEDIR=/eos/cms/store/user/slava77/samples/LST/CMSSW_12_2_0_pre2/
+
+# compile standalone LST; run with -h for help; useful more debug build -mCGds
+lst_make_tracklooper >& build.log &
+
+# optionally also build CMSSW side libraries
 # If modifying some dependencies, run `git cms-checkdeps -a -A`
-scram b -j 12
-cd RecoTracker/LSTCore/standalone
+cd $CMSSW_BASE/src
+scram b -j 12 >& build.log
 ```
-
-The data files for LST will be fetched from CVMFS. However, if new data files are needed, the need to be manually placed (under `$CMSSW_BASE/external/$SCRAM_ARCH/data/RecoTracker/LSTCore/data/`). This is done by running:
-
-```bash
-mkdir -p $CMSSW_BASE/external/$SCRAM_ARCH/data/RecoTracker/LSTCore/
-cd $CMSSW_BASE/external/$SCRAM_ARCH/data/RecoTracker/LSTCore/
-git clone git@github.com:cms-data/RecoTracker-LSTCore.git data
-<modify the files or checkout a different branch>
-cd -
-```
-
-### Setting up LST outside of CMSSW
-
-For this setup, dependencies are still provided from CMSSW through CVMFS but no CMSSW area is setup. This is done by running the following commands.
-
-``` bash
-LST_BRANCH=master # Change to the development branch
-git clone --filter=blob:none --no-checkout --depth 1 --sparse --branch ${LST_BRANCH} https://github.com/SegmentLinking/cmssw.git TrackLooper
-cd TrackLooper
-git sparse-checkout add RecoTracker/LSTCore
-git checkout
-cd RecoTracker/LSTCore/standalone/
-```
-
-As in the sectino above, the data files are fetched from CVMFS, but they can also be copied manually under `RecoTracker/LSTCore/data/`.
-
 
 ## Running the code
 
-Each time the standalone version of LST is to be used, the following command should be run from the `RecoTracker/LSTCore/standalone` directory:
-```bash
-source setup.sh
-```
 
 For running the code:
 
-    lst_make_tracklooper -m
-    lst_<backend> -i PU200 -o LSTNtuple.root
+    lst_<backend> -i PU200 -o LSTNtuple.root # or fullInputFileName.root
     createPerfNumDenHists -i LSTNtuple.root -o LSTNumDen.root
     lst_plot_performance.py LSTNumDen.root -t "myTag" # or
-    python3 efficiency/python/lst_plot_performance.py LSTNumDen.root -t "myTag" # if you are on cgpu-1 or Cornell
+    python3 efficiency/python/lst_plot_performance.py LSTNumDen.root -t "myTag"
+
+
 
 The above can be even simplified
+
+    lst_run -s PU200 -b cpu -d -t test -n 10 >& test.cpu.log & #quick test
 
     lst_run -f -m -s PU200 -n -1 -t myTag
 
@@ -98,7 +77,7 @@ Run the code
  
     lst_<backend> -n <nevents> -v <verbose> -w <writeout> -s <streams> -i <dataset> -o <output>
 
-    -i: PU200; muonGun, etc
+    -i: PU200; muonGun, etc [short-named samples are not setup on lxplus-gpu]
     -n: number of events; default: all
     -v: 0-no printout; 1- timing printout only; 2- multiplicity printout; default: 0
     -s: number of streams/events in flight; default: 1
@@ -132,10 +111,7 @@ To give an example of plotting efficiency, object type of lower level T5, for |e
 
 NOTE: in order to plot lower level object, ```-l``` option must have been used during ```sdl``` step!
 
-When running on ```cgpu-1``` remember to specify python3 as there is no python.
-The shebang on the ```lst_plot_performance.py``` is not updated as ```lnx7188``` works with python2...
-
-    python3 efficiency/python/lst_plot_performance.py num_den_hist.root -t "mywork" # If running on cgpu-1
+    python3 efficiency/python/lst_plot_performance.py num_den_hist.root -t "mywork"
                                                                                                                                                            
 Comparing two different runs
 
@@ -146,13 +122,9 @@ Comparing two different runs
         -t "mywork" \
         --compare
 
-# How to set up CMSSW with LST
+## Run the LST reconstruction in CMSSW matrix or cmsRun
 
-## Setting up the area
-
-Follow the instructions in the ["Setting up LST within CMSSW" section](#setting-up-lst-within-cmssw-preferred-option).
-
-## Run the LST reconstruction in CMSSW (read to the end, before running)
+NOTES ARE INCOMPLETE for Pune hackathon:
 
 A two-iteration, tracking-only offline workflow with PU, running LST (on GPU if available, otherwise on CPU), 34634.712, has been implemented within CMSSW. More LST workflows can be found in https://github.com/cms-sw/cmssw/tree/master/Configuration/PyReleaseValidation.
 
