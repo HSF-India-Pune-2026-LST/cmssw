@@ -32,7 +32,7 @@ voms-proxy-init -voms cms --valid 168:00
 (see also instructions at [this link](https://cmshltupgrade.docs.cern.ch/RunningInstructions/))
 
 ```bash
-cmsDriver.py Phase2 -s L1P2GT,HLT_75e33_trackingOnly --processName=HLTX \
+cmsDriver.py Phase2 -s L1P2GT,HLT:75e33_trackingOnly --processName=HLTX \
 --conditions auto:phase2_realistic_T35 \
 --geometry ExtendedRun4D121 \
 --era Phase2C17I13M9 \
@@ -42,7 +42,7 @@ cmsDriver.py Phase2 -s L1P2GT,HLT_75e33_trackingOnly --processName=HLTX \
 --inputCommands='keep *, drop *_hlt*_*_HLT, drop triggerTriggerFilterObjectWithRefs_l1t*_*_HLT' \
 --fileout output_HLTPhase2_baseline.root \
 --mc \
---python_filename hltTracking.py
+--no_exec --python_filename hltTracking.py \
 -n 100 --nThreads 1 --accelerators gpu-nvidia
 
 cmsRun hltTracking.py >& mylog-hltTracking-gpu.txt&
