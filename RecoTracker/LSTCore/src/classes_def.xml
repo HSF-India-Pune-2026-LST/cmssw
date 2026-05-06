@@ -7,6 +7,13 @@
   <class name="lst::PixelSeedsSoALayout<128,false>"/>
   <class name="edm::Wrapper<lst::LSTInputHostCollection>" splitLevel="0" persistent="false"/>
 
+  <class name="lst::LSTPixelHitsHostCollection"/>
+  <!-- lst::LSTPixelHitsHostCollection::Layout must be listed before the aliased-to type -->
+  <class name="lst::LSTPixelHitsHostCollection::Layout"/>
+  <class name="lst::LSTPixelHitsSoALayout<128,false>"/> 
+  <class name="edm::Wrapper<lst::LSTPixelHitsHostCollection>" splitLevel="0" persistent="false"/>
+
+  
   <class name="lst::TrackCandidatesBaseHostCollection"/>
   <!-- lst::TrackCandidatesBaseHostCollection::Layout must be listed before the aliased-to type -->
   <class name="lst::TrackCandidatesBaseHostCollection::Layout"/>
