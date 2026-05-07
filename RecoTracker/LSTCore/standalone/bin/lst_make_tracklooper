@@ -171,9 +171,9 @@ echo "--------------------------------------------------------------------------
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 echo "---------------------------------------------------------------------------------------------" >> ${LOG} 2>&1 
 if $SHOWLOG; then
-    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
+    (cd LST && make ${BACKENDOPT} ${PRINTWARNINGSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) 2>&1 | tee -a ${LOG}
 else
-    (cd LST && make clean && make ${BACKENDOPT} ${PRINTWARNINGSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) >> ${LOG} 2>&1
+    (cd LST && make ${BACKENDOPT} ${PRINTWARNINGSOPT} -j ${MAXMAKETHREADS} ${MAKETARGET} && cd -) >> ${LOG} 2>&1
 fi
 
 if ([[ "$BACKENDOPT" == *"all"* ]] || [[ "$BACKENDOPT" == *"cpu"* ]]) && [ ! -f LST/liblst_cpu.so ]; then
