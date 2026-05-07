@@ -2,7 +2,7 @@
 
 Hackathon version, relying on lxplus-gpu, assuming cvmfs is available and using cms-related git commands
 
-## Setting up LST
+## Setting up LST for both standalone and full framework
 
 
 ```bash
@@ -22,10 +22,8 @@ git remote set-url --push hack-cmssw git@github.com:HSF-India-Pune-2026-LST/cmss
 # and checkout a development/feature branch
 git cms-addpkg RecoTracker/LST RecoTracker/LSTCore
 cd $CMSSW_BASE/src/RecoTracker/LSTCore/standalone/
-mkdir -p tmp
 
 # also repeat on relogin/restart
-export TMPDIR=$PWD/tmp
 source setup.sh
 # explicit pointer for lxplus
 export TRACKINGNTUPLEDIR=/eos/cms/store/user/slava77/samples/LST/CMSSW_12_2_0_pre2/
@@ -39,10 +37,18 @@ cd $CMSSW_BASE/src
 scram b -j 12 >& build.log
 ```
 
-## Running the code
+## Running the code in standalone
 
 
-For running the code:
+For running the LST algorithmic code:
+
+    lst_<backend> -i PU200 -o LSTNtuple.root
+
+similar, exploring more arguments (check -h for all) for a quick more verbose test: `-n 10` only 10 events, `-w 0` no output root file, `-v 2` more verbose, `-s 1` single stream/queue
+
+    lst_cuda -i PU200 -n 10 -s 1 -w 0 -v 2
+
+Full combination, including the physics performance analysis
 
     lst_<backend> -i PU200 -o LSTNtuple.root # or fullInputFileName.root
     createPerfNumDenHists -i LSTNtuple.root -o LSTNumDen.root
@@ -51,7 +57,7 @@ For running the code:
 
 
 
-The above can be even simplified
+The above can be even simplified to a single command that runs all steps
 
     lst_run -s PU200 -b cpu -d -t test -n 10 >& test.cpu.log & #quick test
 
@@ -60,6 +66,7 @@ The above can be even simplified
 The `-f` flag can be omitted when the code has already been compiled. If multiple backends were compiled, then the `-b` flag can be used to specify a backend. For example
 
     lst_run -b cpu -s PU200 -n -1 -t myTag
+
 
 ### Command explanations
 
@@ -122,30 +129,43 @@ Comparing two different runs
         -t "mywork" \
         --compare
 
-## Run the LST reconstruction in CMSSW matrix or cmsRun
+## Running LST at HLT within CMSSW:
+(see also instructions at [this link](https://cmshltupgrade.docs.cern.ch/RunningInstructions/))
 
-NOTES ARE INCOMPLETE for Pune hackathon:
+```bash
+cmsDriver.py Phase2 -s L1P2GT,HLT:75e33_trackingOnly --processName=HLTX \
+--conditions auto:phase2_realistic_T35 \
+--geometry ExtendedRun4D121 \
+--era Phase2C17I13M9 \
+--eventcontent FEVTDEBUGHLT \
+--customise SLHCUpgradeSimulations/Configuration/aging.customise_aging_1000 \
+--filein file:/eos/cms/store/user/mmasciov/HSF-India-Pune-2026-LST/output_Phase2_L1T_RelValTTbar_PU_16_1_0_pre2_D121_1k.root \
+--inputCommands='keep *, drop *_hlt*_*_HLT, drop triggerTriggerFilterObjectWithRefs_l1t*_*_HLT' \
+--fileout output_HLTPhase2_baseline.root \
+--mc \
+--no_exec --python_filename hltTracking.py \
+-n 100 --nThreads 1 --accelerators gpu-nvidia
 
-A two-iteration, tracking-only offline workflow with PU, running LST (on GPU if available, otherwise on CPU), 34634.712, has been implemented within CMSSW. More LST workflows can be found in https://github.com/cms-sw/cmssw/tree/master/Configuration/PyReleaseValidation.
-
-To get the commands for the workflow mentioned above, one can run:
-
-    runTheMatrix.py -w upgrade -n -e -l 34634.712
-
-The input files in each step may need to be properly adjusted to match the ones produced by the previous step/provided externally, hence it is better to run the commands with the `--no_exec` option included.
-
-Running the configuration file with `cmsRun`, the output file will have a name starting with `DQM`. The name is the same every time this step runs,
-so it is good practice to rename the file, e.g. to `step4_34634.712.root`.
-The MTV plots can be produced with the command:
-
-    makeTrackValidationPlots.py --extended step4_34634.712.root
-
-Comparison plots can be made by including multiple ROOT files as arguments.
-
-## Code formatting and checking
-
-Using the first setup option above, it is prefered to run the checks provided by CMSSW using the following commands.
-
+cmsRun hltTracking.py >& mylog-hltTracking-gpu.txt&
 ```
-scram b -j 12 code-checks >& c.log && scram b -j 12 code-format >& f.log
+
+## Running HLT multi-track validation:
+
+```bash
+cmsDriver.py DQM -s VALIDATION:hltMultiTrackValidation --conditions auto:phase2_realistic_T35 --geometry ExtendedRun4D121 --era Phase2C17I13M9 --datatier DQMIO --eventcontent DQM --filein file:output_HLTPhase2_baseline.root --hltProcess HLTX --fileout DQM_baseline.root -n -1 --nThreads 1 --no_exec --python_filename hltValidation.py
+
+cmsRun hltValidation.py >& mylog-val.txt&
+```
+
+## Running harvesting:
+
+```bash
+cmsDriver.py HARVEST -s HARVESTING:@trackingOnlyValidation+@trackingOnlyDQM+postProcessorHLTtrackingSequence --filein file:DQM_baseline.root --scenario pp --filetype DQM --conditions auto:phase2_realistic_T35 --mc -n -1 --no_exec --python_filename hltHarvest.py
+
+cmsRun hltHarvest.py >& mylog-harvest.txt&
+```
+
+## Make validation plots:
+```bash
+makeTrackValidationPlots.py --extended <filename #1> <filename #2>
 ```
