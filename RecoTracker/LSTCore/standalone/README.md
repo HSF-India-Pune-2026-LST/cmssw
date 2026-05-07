@@ -20,6 +20,8 @@ git cms-init --upstream-only -q
 git remote add hack-cmssw https://github.com/HSF-India-Pune-2026-LST/cmssw.git
 git remote set-url --push hack-cmssw git@github.com:HSF-India-Pune-2026-LST/cmssw.git
 # and checkout a development/feature branch
+git fetch hack-cmssw CMSSW_16_1_0_pre4_LST_pixelDirect:CMSSW_16_1_0_pre4_LST_pixelDirect
+git checkout CMSSW_16_1_0_pre4_LST_pixelDirect
 git cms-addpkg RecoTracker/LST RecoTracker/LSTCore
 cd $CMSSW_BASE/src/RecoTracker/LSTCore/standalone/
 
