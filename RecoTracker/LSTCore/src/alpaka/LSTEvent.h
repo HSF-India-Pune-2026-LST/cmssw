@@ -5,6 +5,7 @@
 #include <optional>
 
 #include "RecoTracker/LSTCore/interface/LSTInputHostCollection.h"
+#include "RecoTracker/LSTCore/interface/LSTPixelHitsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/HitsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/MiniDoubletsHostCollection.h"
 #include "RecoTracker/LSTCore/interface/PixelQuintupletsHostCollection.h"
@@ -20,6 +21,7 @@
 #include "RecoTracker/LSTCore/interface/alpaka/Common.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LST.h"
 #include "RecoTracker/LSTCore/interface/alpaka/LSTInputDeviceCollection.h"
+#include "RecoTracker/LSTCore/interface/alpaka/LSTPixelHitsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/HitsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/MiniDoubletsDeviceCollection.h"
 #include "RecoTracker/LSTCore/interface/alpaka/PixelQuintupletsDeviceCollection.h"
@@ -59,7 +61,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     uint16_t pixelModuleIndex_;
 
     //Device stuff
-    LSTInputDeviceCollection const* lstInputDC_;  // not owned
+    LSTInputDeviceCollection const* lstInputDC_;          // not owned
+    LSTPixelHitsDeviceCollection const* lstPixelHitsDC_;  // not owned
     std::optional<ObjectRangesDeviceCollection> rangesDC_;
     std::optional<HitsDeviceCollection> hitsDC_;
     std::optional<MiniDoubletsDeviceCollection> miniDoubletsDC_;
@@ -75,6 +78,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
 
     //CPU interface stuff
     std::optional<LSTInputHostCollection> lstInputHC_;
+    std::optional<LSTPixelHitsHostCollection> lstPixelHitsHC_;
     std::optional<ObjectRangesHostCollection> rangesHC_;
     std::optional<HitsHostCollection> hitsHC_;
     std::optional<MiniDoubletsHostCollection> miniDoubletsHC_;
@@ -124,6 +128,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lst {
     void wait() const { alpaka::wait(queue_); }
 
     void addInputToEvent(LSTInputDeviceCollection const* lstInputDC);
+    void addPixelHitsToEvent(LSTPixelHitsDeviceCollection const* lstPixelHitsDC);
     // Calls the appropriate hit function, then increments the counter
     void addHitToEvent();
     void addPixelSegmentToEventStart();

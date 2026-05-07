@@ -14,6 +14,7 @@
 
 using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 using LSTInputDeviceCollection = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTInputDeviceCollection;
+using LSTPixelHitsDeviceCollection = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTPixelHitsDeviceCollection;
 using ::lst::PixelType;
 
 // --------------------- ======================== ---------------------
@@ -114,6 +115,8 @@ TVector3 calculateR3FromPCA(const TVector3& p3, const float dxy, const float dz)
 float addInputsToEventPreLoad(LSTEvent* event,
                               lst::LSTInputHostCollection* lstInputHC,
                               LSTInputDeviceCollection* lstInputDC,
+                              lst::LSTPixelHitsHostCollection* lstPixelHitsHC,
+                              LSTPixelHitsDeviceCollection* lstPixelHitsDC,
                               ALPAKA_ACCELERATOR_NAMESPACE::Queue& queue);
 
 void printTimingInformation(std::vector<std::vector<float>>& timing_information, float fullTime, float fullavg);

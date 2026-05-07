@@ -1,5 +1,6 @@
 #include "lst.h"
 #include "LSTPrepareInput.h"
+#include "LSTPreparePixelHits.h"
 
 #include <typeinfo>
 
@@ -7,6 +8,7 @@
 
 using LSTEvent = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTEvent;
 using LSTInputDeviceCollection = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTInputDeviceCollection;
+using LSTPixelHitsDeviceCollection = ALPAKA_ACCELERATOR_NAMESPACE::lst::LSTPixelHitsDeviceCollection;
 using namespace ::lst;
 
 //___________________________________________________________________________________________________________________________________________________________________________________________
@@ -379,6 +381,7 @@ void run_lst() {
   }
 
   std::vector<LSTInputHostCollection> out_lstInputHC;
+  std::vector<LSTPixelHitsHostCollection> out_lstPixelHitsHC;
   std::vector<int> evt_num;
   std::vector<TString> file_name;
 
@@ -429,6 +432,22 @@ void run_lst() {
 
     out_lstInputHC.push_back(std::move(lstInputHC));
 
+    // Backwards compatibility
+    const auto trk_pix_clustSizeCol =
+        hasClustSize ? trk.getVUS("pix_clustSizeCol") : std::vector<uint16_t>(trk.getVF("pix_x").size());
+    const auto trk_pix_clustSizeRow =
+        hasClustSize ? trk.getVUS("pix_clustSizeRow") : std::vector<uint16_t>(trk.getVF("pix_x").size());
+
+    auto lstPixelHitsHC = preparePixelHits(trk.getVU("pix_detId"),
+                                           trk_pix_clustSizeCol,
+                                           trk_pix_clustSizeRow,
+                                           trk.getVF("pix_x"),
+                                           trk.getVF("pix_y"),
+                                           trk.getVF("pix_z"),
+                                           queues[0]);
+
+    out_lstPixelHitsHC.push_back(std::move(lstPixelHitsHC));
+
     evt_num.push_back(ana.looper.getCurrentEventIndex());
     file_name.push_back(ana.looper.getCurrentFileName());
   }
@@ -473,9 +492,14 @@ void run_lst() {
       // We need to initialize it here so that it stays in scope
       auto &queue = *event_queues.at(omp_get_thread_num());
       LSTInputDeviceCollection lstInputDC(queue, out_lstInputHC.at(evt)->metadata().size());
+      LSTPixelHitsDeviceCollection lstPixelHitsDC(queue, out_lstPixelHitsHC.at(evt)->metadata().size());
 
-      timing_input_loading =
-          addInputsToEventPreLoad(events.at(omp_get_thread_num()), &out_lstInputHC.at(evt), &lstInputDC, queue);
+      timing_input_loading = addInputsToEventPreLoad(events.at(omp_get_thread_num()),
+                                                     &out_lstInputHC.at(evt),
+                                                     &lstInputDC,
+                                                     &out_lstPixelHitsHC.at(evt),
+                                                     &lstPixelHitsDC,
+                                                     queue);
 
       timing_MD = runMiniDoublet(events.at(omp_get_thread_num()), evt);
       timing_LS = runSegment(events.at(omp_get_thread_num()));
