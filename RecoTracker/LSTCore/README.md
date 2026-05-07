@@ -194,3 +194,144 @@ For this exercise, the DNN weights are **hard-coded in C++**.
 They are defined as constant arrays inside a helper namespace (for example dnn_tc::Weights).
 
 ---
+
+### TO-DO:
+
+## A. Kernel implementation (device code)
+
+All kernels in this section must be implemented in:
+
+RecoTracker/LSTCore/src/alpaka/TrackCandidate.h
+
+### Task A1 — Implement the DNN inference kernel
+
+- [ ] Write the TrackCandidateDNNMask kernel.
+- [ ] Launch one thread per TrackCandidate.
+- [ ] Read TrackCandidate features (e.g. number of hits, candidate type).
+- [ ] Evaluate the DNN using the provided weights.
+- [ ] Compare the DNN score to a threshold.
+- [ ] Write the result into tcDNNMask[i]:
+  - 1 → keep TrackCandidate
+  - 0 → reject TrackCandidate
+
+Note: This kernel must not modify or remove TrackCandidates. It only produces the decision mask.
+
+---
+
+### Task A2 — Implement the survivor counting kernel
+
+- [ ] Write the CountSelectedTCs kernel.
+- [ ] Iterate over all TrackCandidates.
+- [ ] Check tcDNNMask[i].
+- [ ] Use atomicAdd to count how many TrackCandidates pass.
+- [ ] Store the result in a device-side counter.
+
+This kernel is required to determine the size of the compacted TrackCandidate containers.
+
+---
+
+### Task A3 — Implement the TrackCandidate compaction kernel
+
+- [ ] Write the TrackCandidateDNNFilter kernel.
+- [ ] Iterate over all original TrackCandidates.
+- [ ] Skip TrackCandidates with tcDNNMask[i] == 0.
+- [ ] Use atomicAdd to reserve an output index.
+- [ ] Copy TrackCandidatesBase data into the compacted container.
+- [ ] Copy TrackCandidatesExtended data into the compacted container.
+
+This kernel physically removes rejected TrackCandidates.
+
+---
+
+## B. Workflow integration (host code)
+
+All changes in this section must be implemented in:
+
+RecoTracker/LSTCore/src/alpaka/LSTEvent.dev.cc
+
+inside the function:
+
+LSTEvent::createTrackCandidates(...)
+
+### Task B1 — Integrate the DNN inference step
+
+- [ ] Allocate a device buffer tcDNNMask (size = nTrackCandidates).
+- [ ] Initialize the mask to zero.
+- [ ] Launch the TrackCandidateDNNMask kernel.
+
+---
+
+### Task B2 — Integrate the counting step
+
+- [ ] Allocate a device-side counter for surviving TrackCandidates.
+- [ ] Launch the CountSelectedTCs kernel.
+- [ ] Copy the result back to the host.
+- [ ] Use it to determine the size of compacted containers.
+
+---
+
+### Task B3 — Integrate the compaction step
+
+- [ ] Allocate compacted TrackCandidatesBase and TrackCandidatesExtended containers.
+- [ ] Allocate and initialize a device write index.
+- [ ] Launch the TrackCandidateDNNFilter kernel.
+- [ ] Replace the old TrackCandidate containers with the compacted ones.
+
+---
+
+## C. Validation and exploration
+
+- [ ] Verify that nTrackCandidates() decreases after compaction.
+- [ ] Confirm that rejected TrackCandidates no longer exist downstream.
+- [ ] Change the DNN threshold and study its effect.
+- [ ] Run on CPU and GPU and confirm consistent behavior.
+
+---
+
+## D. Advanced exercises (optional)
+
+- [ ] Add additional TrackCandidate features to the DNN input.
+- [ ] Experiment with different toy DNN weights.
+- [ ] Replace hard-coded weights with weights loaded from the EventSetup.
+- [ ] Compare atomic compaction with scan-based compaction in newer CMSSW releases.
+
+---
+
+TrackCandidate DNN Filtering: Student To‑Do
+------------------------------------------
+
+[ TrackCandidate.h ]
+        |
+        v
++--------------------------------------+
+| Write TrackCandidateDNNMask kernel   |
+|  - Read TC features                  |
+|  - Evaluate DNN                      |
+|  - Write tcDNNMask[i] (0 or 1)       |
++--------------------------------------+
+        |
+        v
++--------------------------------------+
+| Write CountSelectedTCs kernel        |
+|  - Count tcDNNMask[i] == 1           |
+|  - Use atomicAdd                     |
++--------------------------------------+
+        |
+        v
++--------------------------------------+
+| Write TrackCandidateDNNFilter kernel |
+|  - Skip rejected TCs                 |
+|  - Copy passing TCs                  |
+|  - Compact Base + Extended SoAs      |
++--------------------------------------+
+        |
+        v
+[ LSTEvent.dev.cc ]
+        |
+        v
++--------------------------------------+
+| Integrate in createTrackCandidates() |
+|  - Allocate device buffers           |
+|  - Launch kernels                    |
+|  - Replace TC containers             |
++--------------------------------------+
