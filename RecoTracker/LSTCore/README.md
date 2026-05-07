@@ -297,41 +297,85 @@ LSTEvent::createTrackCandidates(...)
 
 ---
 
-TrackCandidate DNN Filtering: Student To‑Do
+### Diagram
 ------------------------------------------
 
-[ TrackCandidate.h ]
+```
+TrackCandidate DNN Filtering — workflow
+================================================================
+
+Legend:
+  [DEVICE]  = GPU/CPU portable Alpaka kernel
+  [HOST]    = CMSSW host-side orchestration
+
+
+----------------------------------------------------------------
+STEP 0 — Existing LST code (already implemented)
+----------------------------------------------------------------
+[HOST]  LSTEvent::createTrackCandidates()
         |
         v
-+--------------------------------------+
-| Write TrackCandidateDNNMask kernel   |
-|  - Read TC features                  |
-|  - Evaluate DNN                      |
-|  - Write tcDNNMask[i] (0 or 1)       |
-+--------------------------------------+
+[DEVICE] ExtendTrackCandidatesFromDupT5
         |
         v
-+--------------------------------------+
-| Write CountSelectedTCs kernel        |
-|  - Count tcDNNMask[i] == 1           |
-|  - Use atomicAdd                     |
-+--------------------------------------+
+        TrackCandidatesBase + TrackCandidatesExtended
+        (indices are now stable)
+
+
+----------------------------------------------------------------
+STEP 1 — DNN decision (TO IMPLEMENT)
+----------------------------------------------------------------
+[DEVICE] TrackCandidateDNNMask        (TrackCandidate.h)
+         - one thread per TrackCandidate
+         - read TC features
+         - run DNN inference
+         - write tcDNNMask[i] = 0 or 1
         |
         v
-+--------------------------------------+
-| Write TrackCandidateDNNFilter kernel |
-|  - Skip rejected TCs                 |
-|  - Copy passing TCs                  |
-|  - Compact Base + Extended SoAs      |
-+--------------------------------------+
+        tcDNNMask (device array, size = nTC)
+
+
+----------------------------------------------------------------
+STEP 2 — Count survivors (TO IMPLEMENT)
+----------------------------------------------------------------
+[DEVICE] CountSelectedTCs             (TrackCandidate.h)
+         - iterate over tcDNNMask
+         - atomicAdd for mask[i] == 1
         |
         v
-[ LSTEvent.dev.cc ]
+        nSelected (device counter)
+
+[HOST]   copy nSelected to host
+         allocate compacted containers
+
+
+----------------------------------------------------------------
+STEP 3 — Compaction / filtering (TO IMPLEMENT)
+----------------------------------------------------------------
+[DEVICE] TrackCandidateDNNFilter      (TrackCandidate.h)
+         - iterate over original TrackCandidates
+         - skip mask[i] == 0
+         - atomicAdd(writeIndex)
+         - copy Base + Extended data
         |
         v
-+--------------------------------------+
-| Integrate in createTrackCandidates() |
-|  - Allocate device buffers           |
-|  - Launch kernels                    |
-|  - Replace TC containers             |
-+--------------------------------------+
+        compactBase + compactExt
+        (only surviving TrackCandidates)
+
+
+----------------------------------------------------------------
+STEP 4 — Replace containers (TO INTEGRATE)
+----------------------------------------------------------------
+[HOST]  LSTEvent::createTrackCandidates()
+        - replace TrackCandidatesBase
+        - replace TrackCandidatesExtended
+
+
+----------------------------------------------------------------
+FINAL STATE
+----------------------------------------------------------------
+Only TrackCandidates that passed the DNN exist.
+nTrackCandidates() is reduced.
+Downstream reconstruction sees filtered data.
+```
+
