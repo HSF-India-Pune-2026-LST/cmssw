@@ -99,6 +99,10 @@ void LSTEvent::addInputToEvent(LSTInputDeviceCollection const* lstInputDC) {
   pixelModuleIndex_ = pixelMapping_.pixelModuleIndex;
 }
 
+void LSTEvent::addPixelHitsToEvent(LSTPixelHitsDeviceCollection const* lstPixelHitsDC) {
+  lstPixelHitsDC_ = lstPixelHitsDC;
+}
+
 void LSTEvent::addHitToEvent() {
   if (!hitsDC_) {
     const int32_t nHits = lstInputDC_->size()[0];

@@ -750,20 +750,30 @@ TVector3 calculateR3FromPCA(const TVector3& p3, const float dxy, const float dz)
 float addInputsToEventPreLoad(LSTEvent* event,
                               lst::LSTInputHostCollection* lstInputHC,
                               LSTInputDeviceCollection* lstInputDC,
+                              lst::LSTPixelHitsHostCollection* lstPixelHitsHC,
+                              LSTPixelHitsDeviceCollection* lstPixelHitsDC,
                               ALPAKA_ACCELERATOR_NAMESPACE::Queue& queue) {
   TStopwatch my_timer;
 
   if (ana.verbose >= 2)
-    std::cout << "Loading Inputs (i.e. outer tracker hits, and pixel line segements) to the Line Segment Tracking.... "
+    std::cout << "Loading Inputs (i.e. inner and outer tracker hits, and pixel line segements) to the Line Segment Tracking.... "
               << std::endl;
 
   my_timer.Start();
 
   // We can't use CopyToDevice because the device can be DevHost
   alpaka::memcpy(queue, lstInputDC->buffer(), lstInputHC->buffer());
+  alpaka::memcpy(queue, lstPixelHitsDC->buffer(), lstPixelHitsHC->buffer());
   alpaka::wait(queue);
+  if (ana.verbose >= 2) {
+    auto mb = alpaka::getExtentProduct(lstInputDC->buffer()) / 1e6;
+    std::cout << std::format("[MEM] LST Input: Hits {} Seeds {} allocated ({:.1f} MB)", lstInputDC->size()[0], lstInputDC->size()[1], mb) << std::endl;
+    mb = alpaka::getExtentProduct(lstPixelHitsDC->buffer()) / 1e6;
+    std::cout << std::format("[MEM] LST Pixel Hits {} allocated ({:.1f} MB)", lstPixelHitsDC->size(), mb) << std::endl;
+  }
 
   event->addInputToEvent(lstInputDC);
+  event->addPixelHitsToEvent(lstPixelHitsDC);
   event->addHitToEvent();
 
   event->addPixelSegmentToEventStart();
