@@ -1,6 +1,11 @@
 #include "LSTPixelHitsKernels.h"
 
-namespace ALPAKA_ACCELERATOR_NAMESPACE::lstpixel {
+namespace ALPAKA_ACCELERATOR_NAMESPACE {
+
+  using Acc1D = ALPAKA_ACCELERATOR_NAMESPACE::Acc1D;
+  using Queue = ALPAKA_ACCELERATOR_NAMESPACE::Queue;
+  
+  namespace lstpixel {
 
   struct CopyHits {
     ALPAKA_FN_ACC void operator()(Acc1D const& acc,
@@ -42,8 +47,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE::lstpixel {
     alpaka::exec<Acc1D>(queue, workDiv, CopyHits{}, input, output, input.metadata().size());
 
     std::cout << "copyHits kernel launched" << std::endl;
-    alpaka::wait(queue);  // Wait for kernel to complete before emplace
+    //    alpaka::wait(queue);  // Wait for kernel to complete before emplace
     std::cout << "After CopyHits - completed successfully" << std::endl;
   }
-
+}
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
