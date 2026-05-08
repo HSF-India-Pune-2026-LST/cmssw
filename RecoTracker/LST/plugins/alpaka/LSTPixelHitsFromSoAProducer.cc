@@ -73,7 +73,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     std::cout << "  outView.xs().data(): " << outView.xs().data() << std::endl;
 
     try {
-    copyHits(queue, pixView, outView);
+      lstpixel::copyHits(queue, pixView, outView);
     } catch (const std::exception& e) {
       std::cerr << "copyHits exception: " << e.what() << std::endl;
       throw;

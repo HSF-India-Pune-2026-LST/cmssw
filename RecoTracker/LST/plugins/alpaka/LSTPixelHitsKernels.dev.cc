@@ -1,19 +1,17 @@
 #include "LSTPixelHitsKernels.h"
 
-namespace ALPAKA_ACCELERATOR_NAMESPACE {
+namespace ALPAKA_ACCELERATOR_NAMESPACE::lstpixel {
 
-  namespace {
-    struct CopyHits {
-      ALPAKA_FN_ACC void operator()(Acc1D const& acc,
-                                    ::reco::TrackingRecHitConstView inHits,
-                                    ::lst::LSTPixelHitsView outHits, int nHits) const {
-        for (unsigned int i : cms::alpakatools::uniform_elements(acc, nHits)) {
-          printf("CopyHits: %dof %d \n", i, nHits);
-          outHits.ys()[i] = inHits.yGlobal()[i];
-        }
+  struct CopyHits {
+    ALPAKA_FN_ACC void operator()(Acc1D const& acc,
+                                  ::reco::TrackingRecHitConstView inHits,
+                                  ::lst::LSTPixelHitsView outHits, int nHits) const {
+      for (unsigned int i : cms::alpakatools::uniform_elements(acc, nHits)) {
+        printf("CopyHits: %dof %d \n", i, nHits);
+        outHits.ys()[i] = inHits.yGlobal()[i];
       }
-    };
-  }
+    }
+  };
   
   void copyHits(Queue& queue, ::reco::TrackingRecHitConstView input, ::lst::LSTPixelHitsView output) {
     std::cout << "copyHits kernel: input size=" << input.metadata().size()
