@@ -49,7 +49,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                             device::Event& iEvent,
                                             const device::EventSetup& es) const {
     // get both Pixel and Tracker SoA collections
-    auto queue = iEvent.queue();
+    auto& queue = iEvent.queue();
     const auto& pixColl = iEvent.get(pixelInputToken_);
     const int nPixHits = pixColl.nHits();
 

@@ -8,6 +8,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
                                     ::reco::TrackingRecHitConstView inHits,
                                     ::lst::LSTPixelHitsView outHits, int nHits) const {
         for (unsigned int i : cms::alpakatools::uniform_elements(acc, nHits)) {
+          printf("CopyHits: %dof %d \n", i, nHits);
           outHits.ys()[i] = inHits.yGlobal()[i];
         }
       }
