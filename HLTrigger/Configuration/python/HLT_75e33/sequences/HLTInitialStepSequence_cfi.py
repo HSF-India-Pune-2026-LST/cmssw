@@ -12,6 +12,7 @@ from ..modules.hltInitialStepTrackSelectionHighPurity_cfi import *
 from ..modules.hltInitialStepTracks_cfi import *
 from ..modules.hltInitialStepTrajectorySeedsLST_cfi import *
 from ..modules.hltInitialStepTrajectorySeedsLSTTracks_cfi import *
+from ..modules.hltLSTPixelHitsFromSoA_cfi import *
 from ..modules.hltLST_cfi import *
 from ..modules.hltSiPhase2RecHits_cfi import *
 from ..sequences.HLTMkFitInputSequence_cfi import *
@@ -21,6 +22,7 @@ HLTInitialStepSequence = cms.Sequence(
     +hltInitialStepSeedTracksLST
     +hltSiPhase2RecHits
     +hltInputLST
+    +hltLSTPixelHitsFromSoA
     +hltLST
     +hltInitialStepTrajectorySeedsLST
     +HLTMkFitInputSequence
