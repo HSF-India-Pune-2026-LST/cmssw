@@ -78,8 +78,8 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
       std::cerr << "copyHits exception: " << e.what() << std::endl;
       throw;
     }
+    alpaka::wait(queue);  // Wait for kernel to complete before emplace
     std::cout << "After copyHits - completed successfully" << std::endl;
-
     // emplace the output
     iEvent.emplace(pixelOutput_, std::move(output));
   }
