@@ -16,9 +16,13 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
   }
   
   void copyHits(Queue& queue, ::reco::TrackingRecHitConstView input, ::lst::LSTPixelHitsView output) {
+    std::cout << "copyHits kernel: input size=" << input.metadata().size()
+              << ", queue=" << &queue << std::endl;
+    
     auto const workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, std::min(1024, input.metadata().size()));
     alpaka::exec<Acc1D>(queue, workDiv, CopyHits{}, input, output);
-    
+
+    std::cout << "copyHits kernel launched" << std::endl;
   }
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
