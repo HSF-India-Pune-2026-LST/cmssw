@@ -27,6 +27,7 @@
 <library file="alpaka/*.cc" name="RecoTrackerLSTPluginsPortable">
   <use name="alpaka"/>
   <use name="DataFormats/TrackReco"/>
+  <use name="DataFormats/TrackingRecHitSoA"/>
   <use name="TrackingTools/TrajectoryState"/>
   <use name="FWCore/Framework"/>
   <use name="FWCore/ParameterSet"/>

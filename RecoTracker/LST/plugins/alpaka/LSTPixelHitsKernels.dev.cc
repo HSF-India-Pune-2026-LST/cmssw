@@ -15,9 +15,9 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
     };
   }
   
-  void copyHits(Queue& queue, reco::TrackingRecHitsSoACollection const& input, lst::LSTPixelHitsDeviceCollection& output) {
-    auto const workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, input.nHits());
-    alpaka::exec<Acc1D>(queue, workDiv, CopyHits{}, input.const_view().trackingHits(), output.view());
+  void copyHits(Queue& queue, ::reco::TrackingRecHitConstView input, ::lst::LSTPixelHitsView output) {
+    auto const workDiv = cms::alpakatools::make_workdiv<Acc1D>(1, std::min(1024, input.metadata().size()));
+    alpaka::exec<Acc1D>(queue, workDiv, CopyHits{}, input, output);
     
   }
 

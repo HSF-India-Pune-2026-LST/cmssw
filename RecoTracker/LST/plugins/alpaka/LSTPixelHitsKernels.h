@@ -4,7 +4,6 @@
 #include "HeterogeneousCore/AlpakaInterface/interface/config.h"
 
 namespace ALPAKA_ACCELERATOR_NAMESPACE {
-  void copyHits(Queue& queue, reco::TrackingRecHitsSoACollection const& input, lst::LSTPixelHitsDeviceCollection& output);
+  void copyHits(Queue& queue, ::reco::TrackingRecHitConstView input, ::lst::LSTPixelHitsView output);
 
 }  // namespace ALPAKA_ACCELERATOR_NAMESPACE
-

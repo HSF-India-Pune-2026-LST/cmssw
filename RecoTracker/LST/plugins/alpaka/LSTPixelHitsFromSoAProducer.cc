@@ -66,7 +66,7 @@ namespace ALPAKA_ACCELERATOR_NAMESPACE {
         cms::alpakatools::make_device_view(queue, outView.xs().data(), nPixHits),
         cms::alpakatools::make_device_view(queue, pixView.xGlobal().data(), nPixHits));
 
-    copyHits(queue, pixColl, output);
+    copyHits(queue, pixView, outView);
 
     // emplace the output
     iEvent.emplace(pixelOutput_, std::move(output));
